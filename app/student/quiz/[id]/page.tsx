@@ -3,13 +3,11 @@
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useQuiz } from "@/lib/quiz-context"
-import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
 import { Clock, ChevronLeft, ChevronRight, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -22,8 +20,6 @@ export default function TakeQuizPage() {
   const [quiz, setQuiz] = useState(quizzes.find((q) => q.id === quizId))
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, number[]>>({})
-  const [studentName, setStudentName] = useState(currentUser?.fullName || "")
-  const [showNameInput, setShowNameInput] = useState(true)
   const [timeRemaining, setTimeRemaining] = useState(0)
 
   useEffect(() => {
@@ -43,7 +39,7 @@ export default function TakeQuizPage() {
   }, [currentUser, quizId, quizzes, router])
 
   useEffect(() => {
-    if (showNameInput || !quiz) return
+    if (!quiz) return
 
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
@@ -56,15 +52,7 @@ export default function TakeQuizPage() {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [showNameInput, quiz])
-
-  const handleStartQuiz = () => {
-    if (!studentName.trim()) {
-      alert("Please enter your name")
-      return
-    }
-    setShowNameInput(false)
-  }
+  }, [quiz])
 
   const handleAnswerChange = (questionId: string, optionIndex: number, isMultiple: boolean) => {
     if (isMultiple) {
@@ -97,7 +85,7 @@ export default function TakeQuizPage() {
       id: Date.now().toString(),
       quizId: quiz.id,
       quizTitle: quiz.title,
-      studentName,
+      studentName: currentUser.fullName,
       studentEmail: currentUser.email,
       answers,
       score,
@@ -113,64 +101,17 @@ export default function TakeQuizPage() {
     return null
   }
 
-  if (showNameInput) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8 max-w-2xl">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">{quiz.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <p className="text-muted-foreground mb-4">{quiz.description}</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Questions:</span>
-                    <span className="font-medium">{quiz.questions.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Duration:</span>
-                    <span className="font-medium">{quiz.duration} minutes</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="studentName">Adınız</Label>
-                <Input
-                  id="studentName"
-                  placeholder="Adınızı daxil edin"
-                  value={studentName}
-                  onChange={(e) => setStudentName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleStartQuiz()}
-                />
-              </div>
-
-              <Button onClick={handleStartQuiz} className="w-full" size="lg">
-                İmtahana Başla
-              </Button>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    )
-  }
-
   const currentQuestion = quiz.questions[currentQuestionIndex]
   const minutes = Math.floor(timeRemaining / 60)
   const seconds = timeRemaining % 60
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-
       {/* Timer Bar */}
       <div className="bg-card border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-semibold">{studentName}</span>
+            <span className="font-semibold">{currentUser.fullName}</span>
             <span className="text-muted-foreground">•</span>
             <span className="text-sm text-muted-foreground">{quiz.title}</span>
           </div>

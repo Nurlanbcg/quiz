@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuiz, type Question, type Quiz } from "@/lib/quiz-context"
-import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -21,6 +20,7 @@ export default function CreateQuizPage() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [duration, setDuration] = useState(30)
+  const [price, setPrice] = useState(0) // Added price state
   const [questions, setQuestions] = useState<Question[]>([])
 
   useEffect(() => {
@@ -103,6 +103,7 @@ export default function CreateQuizPage() {
       title,
       description,
       duration,
+      price, // Added price to quiz object
       questions,
       createdAt: new Date().toISOString(),
       isActive: true,
@@ -118,7 +119,6 @@ export default function CreateQuizPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <Button asChild variant="ghost" size="sm" className="mb-4">
           <Link href="/admin">
@@ -157,15 +157,29 @@ export default function CreateQuizPage() {
                 rows={3}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="duration">Müddət (dəqiqə)</Label>
-              <Input
-                id="duration"
-                type="number"
-                min="1"
-                value={duration}
-                onChange={(e) => setDuration(Number.parseInt(e.target.value) || 30)}
-              />
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="duration">Müddət (dəqiqə)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  min="1"
+                  value={duration}
+                  onChange={(e) => setDuration(Number.parseInt(e.target.value) || 30)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Qiymət (₼)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(Number.parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

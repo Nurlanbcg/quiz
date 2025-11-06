@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useQuiz } from "@/lib/quiz-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +14,8 @@ import { GraduationCap, AlertCircle } from "lucide-react"
 export default function LoginPage() {
   const { login } = useQuiz()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnUrl = searchParams.get("returnUrl")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -34,7 +36,9 @@ export default function LoginPage() {
     const user = login(email, password)
 
     if (user) {
-      if (user.role === "admin") {
+      if (returnUrl) {
+        router.push(returnUrl)
+      } else if (user.role === "admin") {
         router.push("/admin")
       } else {
         router.push("/student")

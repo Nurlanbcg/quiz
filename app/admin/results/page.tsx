@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuiz } from "@/lib/quiz-context"
-import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, FileText, TrendingUp, Users, Award } from "lucide-react"
@@ -35,7 +34,6 @@ export default function ResultsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <Button asChild variant="ghost" size="sm" className="mb-4">
           <Link href="/admin">

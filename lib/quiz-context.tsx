@@ -17,6 +17,7 @@ export interface Quiz {
   title: string
   description: string
   duration: number // in minutes
+  price: number // Added price field
   questions: Question[]
   createdAt: string
   isActive: boolean
@@ -39,8 +40,22 @@ export interface User {
   email: string
   password: string
   fullName: string
+  phone: string // Added phone field to User interface
   role: "admin" | "student"
   createdAt: string
+  purchasedQuizzes: string[] // Added to track which quizzes user has purchased
+}
+
+export interface RegistrationRequest {
+  id: string
+  quizId: string
+  quizTitle: string
+  fullName: string
+  email: string
+  phone: string
+  password: string
+  requestedAt: string
+  status: "pending" | "approved" | "rejected"
 }
 
 interface QuizContextType {
@@ -49,6 +64,7 @@ interface QuizContextType {
   users: User[]
   addUser: (user: User) => void
   deleteUser: (id: string) => void
+  updateUser: (user: User) => void // Added to update user data
   login: (email: string, password: string) => User | null
   logout: () => void
   quizzes: Quiz[]
@@ -57,6 +73,9 @@ interface QuizContextType {
   toggleQuizActive: (id: string) => void
   results: QuizResult[]
   addResult: (result: QuizResult) => void
+  registrationRequests: RegistrationRequest[]
+  addRegistrationRequest: (request: RegistrationRequest) => void
+  purchaseQuiz: (userId: string, quizId: string) => void // Added to handle quiz purchases
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined)
@@ -66,6 +85,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>([])
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [results, setResults] = useState<QuizResult[]>([])
+  const [registrationRequests, setRegistrationRequests] = useState<RegistrationRequest[]>([]) // Added state
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -73,17 +93,25 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     const savedQuizzes = localStorage.getItem("quizzes")
     const savedResults = localStorage.getItem("results")
     const savedCurrentUser = localStorage.getItem("currentUser")
+    const savedRegistrationRequests = localStorage.getItem("registrationRequests")
 
     if (savedUsers) {
-      setUsers(JSON.parse(savedUsers))
+      const loadedUsers = JSON.parse(savedUsers)
+      const usersWithPurchases = loadedUsers.map((u: User) => ({
+        ...u,
+        purchasedQuizzes: u.purchasedQuizzes || [],
+      }))
+      setUsers(usersWithPurchases)
     } else {
       const defaultAdmin: User = {
         id: "admin-1",
         email: "admin@quiz.com",
         password: "admin123",
         fullName: "Admin User",
+        phone: "",
         role: "admin",
         createdAt: new Date().toISOString(),
+        purchasedQuizzes: [], // Added default empty array
       }
       setUsers([defaultAdmin])
       localStorage.setItem("users", JSON.stringify([defaultAdmin]))
@@ -96,7 +124,14 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       setResults(JSON.parse(savedResults))
     }
     if (savedCurrentUser) {
-      setCurrentUser(JSON.parse(savedCurrentUser))
+      const loadedUser = JSON.parse(savedCurrentUser)
+      setCurrentUser({
+        ...loadedUser,
+        purchasedQuizzes: loadedUser.purchasedQuizzes || [],
+      })
+    }
+    if (savedRegistrationRequests) {
+      setRegistrationRequests(JSON.parse(savedRegistrationRequests))
     }
   }, [])
 
@@ -130,11 +165,23 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser])
 
+  useEffect(() => {
+    if (registrationRequests.length > 0) {
+      localStorage.setItem("registrationRequests", JSON.stringify(registrationRequests))
+    }
+  }, [registrationRequests])
+
   const login = (email: string, password: string): User | null => {
+    console.log("[v0] Login attempt:", { email, totalUsers: users.length }) // Debug logging
     const user = users.find((u) => u.email === email && u.password === password)
+    console.log("[v0] User found:", user ? "Yes" : "No") // Debug logging
     if (user) {
-      setCurrentUser(user)
-      return user
+      const userWithPurchases = {
+        ...user,
+        purchasedQuizzes: user.purchasedQuizzes || [],
+      }
+      setCurrentUser(userWithPurchases)
+      return userWithPurchases
     }
     return null
   }
@@ -144,11 +191,23 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   }
 
   const addUser = (user: User) => {
-    setUsers((prev) => [...prev, user])
+    console.log("[v0] Adding user:", user.email) // Debug logging
+    setUsers((prev) => {
+      const newUsers = [...prev, user]
+      console.log("[v0] Total users after add:", newUsers.length) // Debug logging
+      return newUsers
+    })
   }
 
   const deleteUser = (id: string) => {
     setUsers((prev) => prev.filter((u) => u.id !== id))
+  }
+
+  const updateUser = (updatedUser: User) => {
+    setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)))
+    if (currentUser?.id === updatedUser.id) {
+      setCurrentUser(updatedUser)
+    }
   }
 
   const addQuiz = (quiz: Quiz) => {
@@ -167,6 +226,31 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setResults((prev) => [...prev, result])
   }
 
+  const addRegistrationRequest = (request: RegistrationRequest) => {
+    setRegistrationRequests((prev) => [...prev, request])
+  }
+
+  const purchaseQuiz = (userId: string, quizId: string) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          const purchasedQuizzes = u.purchasedQuizzes || []
+          if (!purchasedQuizzes.includes(quizId)) {
+            return { ...u, purchasedQuizzes: [...purchasedQuizzes, quizId] }
+          }
+        }
+        return u
+      }),
+    )
+
+    if (currentUser?.id === userId) {
+      const purchasedQuizzes = currentUser.purchasedQuizzes || []
+      if (!purchasedQuizzes.includes(quizId)) {
+        setCurrentUser({ ...currentUser, purchasedQuizzes: [...purchasedQuizzes, quizId] })
+      }
+    }
+  }
+
   return (
     <QuizContext.Provider
       value={{
@@ -175,6 +259,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         users,
         addUser,
         deleteUser,
+        updateUser, // Added to context
         login,
         logout,
         quizzes,
@@ -183,6 +268,9 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         toggleQuizActive,
         results,
         addResult,
+        registrationRequests,
+        addRegistrationRequest,
+        purchaseQuiz, // Added to context
       }}
     >
       {children}

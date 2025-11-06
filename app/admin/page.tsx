@@ -1,19 +1,20 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuiz } from "@/lib/quiz-context"
-import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, FileText, Trash2, BarChart3, Users } from "lucide-react"
+import { Plus, FileText, Trash2, BarChart3, Copy, CheckCircle, Users } from "lucide-react"
 import Link from "next/link"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 export default function AdminPage() {
   const { currentUser, quizzes, deleteQuiz, toggleQuizActive } = useQuiz()
   const router = useRouter()
+  const [copiedQuizId, setCopiedQuizId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "admin") {
@@ -21,13 +22,19 @@ export default function AdminPage() {
     }
   }, [currentUser, router])
 
+  const handleCopyLink = (quizId: string) => {
+    const link = `${window.location.origin}/exam/${quizId}`
+    navigator.clipboard.writeText(link)
+    setCopiedQuizId(quizId)
+    setTimeout(() => setCopiedQuizId(null), 2000)
+  }
+
   if (!currentUser || currentUser.role !== "admin") {
     return null
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -36,9 +43,9 @@ export default function AdminPage() {
           </div>
           <div className="flex gap-3">
             <Button asChild variant="outline">
-              <Link href="/admin/students">
+              <Link href="/admin/users">
                 <Users className="w-4 h-4 mr-2" />
-                İstifadəçiləri İdarə Et
+                İstifadəçilər
               </Link>
             </Button>
             <Button asChild variant="outline">
@@ -97,6 +104,10 @@ export default function AdminPage() {
                       <span>Müddət:</span>
                       <span className="font-medium text-foreground">{quiz.duration} dəqiqə</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span>Qiymət:</span>
+                      <span className="font-medium text-foreground">{quiz.price} ₼</span>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between mb-4 p-3 bg-muted rounded-lg">
@@ -108,6 +119,22 @@ export default function AdminPage() {
                       checked={quiz.isActive}
                       onCheckedChange={() => toggleQuizActive(quiz.id)}
                     />
+                  </div>
+
+                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <Label className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-2 block">
+                      İmtahan Linki
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={`${typeof window !== "undefined" ? window.location.origin : ""}/exam/${quiz.id}`}
+                        readOnly
+                        className="flex-1 text-xs bg-white dark:bg-gray-900"
+                      />
+                      <Button size="sm" variant="outline" onClick={() => handleCopyLink(quiz.id)} className="shrink-0">
+                        {copiedQuizId === quiz.id ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
                   </div>
 
                   <Button

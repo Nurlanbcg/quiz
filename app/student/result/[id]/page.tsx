@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useQuiz, type QuizResult } from "@/lib/quiz-context"
-import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, XCircle, ArrowLeft } from "lucide-react"
@@ -52,7 +51,6 @@ export default function ResultPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <Button asChild variant="ghost" size="sm" className="mb-4">
           <Link href="/student">
