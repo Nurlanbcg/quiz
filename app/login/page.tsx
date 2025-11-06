@@ -41,7 +41,7 @@ export default function LoginPage() {
       } else if (user.role === "admin") {
         router.push("/admin")
       } else {
-        router.push("/student")
+        router.push("/")
       }
     } else {
       setError("Invalid email or password")
