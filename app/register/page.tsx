@@ -10,15 +10,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { useQuiz } from "@/lib/quiz-context" // Import useQuiz hook
+import { useQuiz } from "@/lib/quiz-context"
+import { PhoneInput } from "@/components/phone-input"
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { addUser, setCurrentUser, users } = useQuiz() // Get context functions
+  const { addUser, setCurrentUser, users } = useQuiz()
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    phone: "",
+    phone: "+994 ",
     password: "",
   })
 
@@ -94,14 +95,7 @@ export default function RegisterPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Telefon</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="+994 XX XXX XX XX"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                required
-              />
+              <PhoneInput value={formData.phone} onChange={(phone) => setFormData({ ...formData, phone })} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Şifrə</Label>
