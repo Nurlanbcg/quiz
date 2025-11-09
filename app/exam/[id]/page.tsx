@@ -26,6 +26,18 @@ export default function ExamDetailsPage({ params }: { params: { id: string } }) 
   })
 
   useEffect(() => {
+    console.log("[v0] Exam Details Debug:")
+    console.log("[v0] URL params.id:", params.id, typeof params.id)
+    console.log("[v0] Total quizzes:", quizzes.length)
+    console.log(
+      "[v0] Quiz IDs:",
+      quizzes.map((q) => ({ id: q.id, type: typeof q.id, title: q.title })),
+    )
+    const foundQuiz = quizzes.find((q) => q.id === params.id)
+    console.log("[v0] Found quiz:", foundQuiz ? "Yes" : "No")
+  }, [quizzes, params.id])
+
+  useEffect(() => {
     if (!currentUser) {
       router.push(`/login?returnUrl=/exam/${params.id}`)
     }
