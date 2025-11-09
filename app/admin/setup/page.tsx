@@ -34,6 +34,52 @@ export default function AdminSetup() {
         },
       })
 
+      // If user already exists in auth, try to sign in to get their ID
+      if (authError?.message.includes("already registered") || authError?.message.includes("User already registered")) {
+        setMessage("Admin already exists in auth, checking database...")
+
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+
+        if (signInError) {
+          setMessage(`Cannot sign in: ${signInError.message}`)
+          setLoading(false)
+          return
+        }
+
+        // Check if user exists in users table
+        const { data: userData, error: userCheckError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", signInData.user.id)
+          .single()
+
+        if (userCheckError && userCheckError.code === "PGRST116") {
+          // User doesn't exist in users table, create it
+          const { error: dbError } = await supabase.from("users").insert({
+            id: signInData.user.id,
+            full_name: fullName,
+            email,
+            phone,
+            role: "admin",
+          })
+
+          if (dbError) {
+            setMessage(`Database Error: ${dbError.message}`)
+            setLoading(false)
+            return
+          }
+        }
+
+        setMessage("Admin user is ready! Redirecting to login...")
+        setTimeout(() => {
+          router.push("/login")
+        }, 2000)
+        return
+      }
+
       if (authError) {
         setMessage(`Auth Error: ${authError.message}`)
         setLoading(false)

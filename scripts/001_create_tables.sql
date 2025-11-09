@@ -2,13 +2,28 @@
 create table if not exists public.users (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null,
-  email text not null,
+  email text not null unique,
   phone text not null,
   role text not null default 'student',
   created_at timestamp with time zone default now()
 );
 
 alter table public.users enable row level security;
+
+-- Drop existing policies if they exist before recreating them
+drop policy if exists "users_select_own" on public.users;
+drop policy if exists "users_update_own" on public.users;
+drop policy if exists "users_insert_own" on public.users;
+drop policy if exists "quizzes_select_all" on public.quizzes;
+drop policy if exists "quizzes_insert_admin" on public.quizzes;
+drop policy if exists "quizzes_update_admin" on public.quizzes;
+drop policy if exists "quizzes_delete_admin" on public.quizzes;
+drop policy if exists "purchases_select_own" on public.purchases;
+drop policy if exists "purchases_insert_own" on public.purchases;
+drop policy if exists "purchases_select_admin" on public.purchases;
+drop policy if exists "quiz_results_select_own" on public.quiz_results;
+drop policy if exists "quiz_results_insert_own" on public.quiz_results;
+drop policy if exists "quiz_results_select_admin" on public.quiz_results;
 
 -- Users can view their own data
 create policy "users_select_own"
