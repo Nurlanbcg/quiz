@@ -26,28 +26,12 @@ export default function ExamDetailsPage({ params }: { params: { id: string } }) 
   })
 
   useEffect(() => {
-    console.log("[v0] ExamDetailsPage mounted")
-    console.log("[v0] Looking for quiz with ID:", params.id)
-    console.log("[v0] Available quizzes:", quizzes.length)
-    console.log(
-      "[v0] Quiz IDs:",
-      quizzes.map((q) => q.id),
-    )
     if (!currentUser) {
       router.push(`/login?returnUrl=/exam/${params.id}`)
     }
   }, [currentUser, router, params.id])
 
   const quiz = quizzes.find((q) => q.id === params.id)
-
-  useEffect(() => {
-    if (quiz) {
-      console.log("[v0] Quiz found:", quiz.title)
-    } else {
-      console.log("[v0] Quiz NOT found for ID:", params.id)
-    }
-  }, [quiz, params.id])
-
   const hasPurchased = currentUser?.purchasedQuizzes?.includes(params.id) || false
 
   if (!currentUser) {
