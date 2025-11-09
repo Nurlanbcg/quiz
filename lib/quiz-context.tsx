@@ -144,16 +144,12 @@ export function QuizProvider({ children }: { children: ReactNode }) {
 
   // Save quizzes to localStorage whenever they change
   useEffect(() => {
-    if (quizzes.length > 0) {
-      localStorage.setItem("quizzes", JSON.stringify(quizzes))
-    }
+    localStorage.setItem("quizzes", JSON.stringify(quizzes))
   }, [quizzes])
 
   // Save results to localStorage whenever they change
   useEffect(() => {
-    if (results.length > 0) {
-      localStorage.setItem("results", JSON.stringify(results))
-    }
+    localStorage.setItem("results", JSON.stringify(results))
   }, [results])
 
   // Save current user to localStorage
