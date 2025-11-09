@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-
+import { createClient } from "@/lib/supabase/client" // Fixed import path
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -16,45 +16,64 @@ import { PhoneInput } from "@/components/phone-input"
 export default function RegisterPage() {
   const router = useRouter()
   const { addUser, setCurrentUser, users } = useQuiz()
+  const supabase = createClient()
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "+994 ",
     password: "",
   })
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
+    setIsLoading(true)
 
     if (!formData.fullName || !formData.email || !formData.phone || !formData.password) {
-      alert("Zəhmət olmasa bütün xanaları doldurun")
+      setError("Zəhmət olmasa bütün xanaları doldurun")
+      setIsLoading(false)
       return
     }
 
-    const existingUser = users.find((u) => u.email === formData.email)
-    if (existingUser) {
-      alert("Bu e-poçt artıq qeydiyyatdan keçib")
-      return
-    }
+    try {
+      // Sign up with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/`,
+          data: {
+            full_name: formData.fullName,
+            phone: formData.phone,
+          },
+        },
+      })
 
-    const newUser = {
-      id: `user-${Date.now()}`,
-      email: formData.email,
-      password: formData.password,
-      fullName: formData.fullName,
-      phone: formData.phone,
-      role: "student" as const,
-      createdAt: new Date().toISOString(),
-      purchasedQuizzes: [], // Initialize with empty purchased quizzes array
-    }
+      if (authError) throw authError
 
-    console.log("[v0] Registering new user:", newUser.email) // Debug logging
-    addUser(newUser)
-    setCurrentUser(newUser)
+      // Create user profile
+      if (authData.user && authData.user.identities && authData.user.identities.length > 0) {
+        const { error: profileError } = await supabase.from("users").insert({
+          id: authData.user.id,
+          full_name: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          role: "student",
+        })
 
-    setTimeout(() => {
+        if (profileError && !profileError.message.includes("duplicate")) {
+          console.error("Error creating profile:", profileError)
+        }
+      }
+
       router.push("/")
-    }, 100)
+    } catch (err: any) {
+      setError(err.message || "Qeydiyyat uğursuz oldu")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -72,6 +91,8 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">{error}</div>}
+
             <div className="space-y-2">
               <Label htmlFor="fullName">Tam Ad</Label>
               <Input
@@ -108,8 +129,8 @@ export default function RegisterPage() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" size="lg">
-              Qeydiyyatdan Keç
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+              {isLoading ? "Qeydiyyat edilir..." : "Qeydiyyatdan Keç"}
             </Button>
           </form>
         </CardContent>

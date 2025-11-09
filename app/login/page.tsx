@@ -26,28 +26,31 @@ export default function LoginPage() {
     setError("")
     setIsLoading(true)
 
-    // Simple validation
     if (!email || !password) {
       setError("Please fill in all fields")
       setIsLoading(false)
       return
     }
 
-    const user = login(email, password)
+    try {
+      const user = await login(email, password)
 
-    if (user) {
-      if (returnUrl) {
-        router.push(returnUrl)
-      } else if (user.role === "admin") {
-        router.push("/admin")
+      if (user) {
+        if (returnUrl) {
+          router.push(returnUrl)
+        } else if (user.role === "admin") {
+          router.push("/admin")
+        } else {
+          router.push("/")
+        }
       } else {
-        router.push("/")
+        setError("Invalid email or password")
       }
-    } else {
-      setError("Invalid email or password")
+    } catch (err: any) {
+      setError(err.message || "Invalid email or password")
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (
