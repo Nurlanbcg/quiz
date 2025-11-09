@@ -3,21 +3,44 @@
 import { useQuiz } from "@/lib/quiz-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, FileText } from "lucide-react"
+import { Clock, FileText, RefreshCw } from "lucide-react"
 import Link from "next/link"
+import { useState } from "react"
 
 export default function HomePage() {
   const { quizzes } = useQuiz()
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const activeQuizzes = quizzes.filter((quiz) => quiz.isActive)
+
+  const handleRefresh = () => {
+    setIsRefreshing(true)
+    // Force a re-render by reloading the page
+    window.location.reload()
+  }
+
+  console.log("[v0] Total quizzes:", quizzes.length)
+  console.log("[v0] Active quizzes:", activeQuizzes.length)
 
   return (
     <div className="min-h-full bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Onlayn İmtahan Platforması
-          </h2>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Onlayn İmtahan Platforması
+            </h2>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="rounded-full bg-transparent"
+              title="Yenilə"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Peşəkar imtahanlar ilə bilik səviyyənizi yoxlayın və inkişaf edin
           </p>
