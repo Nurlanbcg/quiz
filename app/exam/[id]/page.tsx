@@ -31,16 +31,7 @@ export default function ExamDetailsPage({ params }: { params: { id: string } }) 
     }
   }, [currentUser, router, params.id])
 
-  console.log("[v0] Looking for quiz with ID:", params.id)
-  console.log(
-    "[v0] Available quiz IDs:",
-    quizzes.map((q) => q.id),
-  )
-
   const quiz = quizzes.find((q) => q.id === params.id)
-
-  console.log("[v0] Quiz found:", quiz ? "Yes" : "No")
-
   const hasPurchased = currentUser?.purchasedQuizzes?.includes(params.id) || false
 
   if (!currentUser) {

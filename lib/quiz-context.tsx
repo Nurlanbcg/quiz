@@ -1,7 +1,6 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { createClient } from "@/lib/supabase/client"
 
 export type QuestionType = "single" | "multiple"
 
@@ -66,19 +65,17 @@ interface QuizContextType {
   addUser: (user: User) => void
   deleteUser: (id: string) => void
   updateUser: (user: User) => void // Added to update user data
-  login: (email: string, password: string) => Promise<User | null> // Made async
-  logout: () => Promise<void> // Made async
+  login: (email: string, password: string) => User | null
+  logout: () => void
   quizzes: Quiz[]
-  addQuiz: (quiz: Quiz) => Promise<void> // Made async
-  deleteQuiz: (id: string) => Promise<void> // Made async
+  addQuiz: (quiz: Quiz) => void
+  deleteQuiz: (id: string) => void
   toggleQuizActive: (id: string) => void
   results: QuizResult[]
   addResult: (result: QuizResult) => void
   registrationRequests: RegistrationRequest[]
   addRegistrationRequest: (request: RegistrationRequest) => void
-  purchaseQuiz: (userId: string, quizId: string) => Promise<void> // Made async
-  refreshQuizzes: () => Promise<void> // Added refresh function
-  refreshUsers: () => Promise<void> // Added refresh function
+  purchaseQuiz: (userId: string, quizId: string) => void // Added to handle quiz purchases
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined)
@@ -88,103 +85,55 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>([])
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [results, setResults] = useState<QuizResult[]>([])
-  const [registrationRequests, setRegistrationRequests] = useState<RegistrationRequest[]>([])
+  const [registrationRequests, setRegistrationRequests] = useState<RegistrationRequest[]>([]) // Added state
 
-  const supabase = createClient()
-
+  // Load data from localStorage on mount
   useEffect(() => {
-    const loadUser = async () => {
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser()
+    const savedUsers = localStorage.getItem("users")
+    const savedQuizzes = localStorage.getItem("quizzes")
+    const savedResults = localStorage.getItem("results")
+    const savedCurrentUser = localStorage.getItem("currentUser")
+    const savedRegistrationRequests = localStorage.getItem("registrationRequests")
 
-      if (authUser) {
-        const { data: userData } = await supabase.from("users").select("*").eq("id", authUser.id).single()
-
-        if (userData) {
-          const { data: purchases } = await supabase.from("purchases").select("quiz_id").eq("user_id", authUser.id)
-
-          setCurrentUser({
-            id: userData.id,
-            fullName: userData.full_name,
-            email: userData.email,
-            phone: userData.phone,
-            role: userData.role,
-            password: "", // Not stored from Supabase
-            createdAt: userData.created_at,
-            purchasedQuizzes: purchases ? purchases.map((p) => p.quiz_id) : [],
-          })
-        }
+    if (savedUsers) {
+      const loadedUsers = JSON.parse(savedUsers)
+      const usersWithPurchases = loadedUsers.map((u: User) => ({
+        ...u,
+        purchasedQuizzes: u.purchasedQuizzes || [],
+      }))
+      setUsers(usersWithPurchases)
+    } else {
+      const defaultAdmin: User = {
+        id: "admin-1",
+        email: "admin@quiz.com",
+        password: "admin123",
+        fullName: "Admin User",
+        phone: "",
+        role: "admin",
+        createdAt: new Date().toISOString(),
+        purchasedQuizzes: [], // Added default empty array
       }
+      setUsers([defaultAdmin])
+      localStorage.setItem("users", JSON.stringify([defaultAdmin]))
     }
 
-    loadUser()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      loadUser()
-    })
-
-    return () => {
-      subscription.unsubscribe()
+    if (savedQuizzes) {
+      setQuizzes(JSON.parse(savedQuizzes))
+    }
+    if (savedResults) {
+      setResults(JSON.parse(savedResults))
+    }
+    if (savedCurrentUser) {
+      const loadedUser = JSON.parse(savedCurrentUser)
+      setCurrentUser({
+        ...loadedUser,
+        purchasedQuizzes: loadedUser.purchasedQuizzes || [],
+      })
+    }
+    if (savedRegistrationRequests) {
+      setRegistrationRequests(JSON.parse(savedRegistrationRequests))
     }
   }, [])
-
-  const refreshQuizzes = async () => {
-    const { data } = await supabase.from("quizzes").select("*").order("created_at", { ascending: false })
-
-    if (data) {
-      setQuizzes(
-        data.map((q) => ({
-          id: q.id,
-          title: q.title,
-          description: q.description || "",
-          questions: q.questions as Question[],
-          duration: q.duration,
-          price: q.price,
-          createdAt: q.created_at,
-          isActive: q.is_active,
-        })),
-      )
-    }
-  }
-
-  const refreshUsers = async () => {
-    if (currentUser?.role === "admin") {
-      const { data } = await supabase.from("users").select("*").order("created_at", { ascending: false })
-
-      if (data) {
-        const usersWithPurchases = await Promise.all(
-          data.map(async (u) => {
-            const { data: purchases } = await supabase.from("purchases").select("quiz_id").eq("user_id", u.id)
-
-            return {
-              id: u.id,
-              fullName: u.full_name,
-              email: u.email,
-              phone: u.phone,
-              role: u.role,
-              password: "", // Not stored from Supabase
-              createdAt: u.created_at,
-              purchasedQuizzes: purchases ? purchases.map((p) => p.quiz_id) : [],
-            }
-          }),
-        )
-        setUsers(usersWithPurchases)
-      }
-    }
-  }
-
-  useEffect(() => {
-    refreshQuizzes()
-  }, [])
-
-  useEffect(() => {
-    if (currentUser?.role === "admin") {
-      refreshUsers()
-    }
-  }, [currentUser])
 
   // Save users to localStorage whenever they change
   useEffect(() => {
@@ -195,12 +144,16 @@ export function QuizProvider({ children }: { children: ReactNode }) {
 
   // Save quizzes to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem("quizzes", JSON.stringify(quizzes))
+    if (quizzes.length > 0) {
+      localStorage.setItem("quizzes", JSON.stringify(quizzes))
+    }
   }, [quizzes])
 
   // Save results to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem("results", JSON.stringify(results))
+    if (results.length > 0) {
+      localStorage.setItem("results", JSON.stringify(results))
+    }
   }, [results])
 
   // Save current user to localStorage
@@ -218,32 +171,32 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     }
   }, [registrationRequests])
 
-  const login = async (email: string, password: string): Promise<User | null> => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (error) {
-      console.error("[v0] Login error:", error)
-      return null
+  const login = (email: string, password: string): User | null => {
+    console.log("[v0] Login attempt:", { email, totalUsers: users.length }) // Debug logging
+    const user = users.find((u) => u.email === email && u.password === password)
+    console.log("[v0] User found:", user ? "Yes" : "No") // Debug logging
+    if (user) {
+      const userWithPurchases = {
+        ...user,
+        purchasedQuizzes: user.purchasedQuizzes || [],
+      }
+      setCurrentUser(userWithPurchases)
+      return userWithPurchases
     }
-
-    // User will be loaded by the auth state listener
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(currentUser), 500)
-    })
+    return null
   }
 
-  const logout = async () => {
-    await supabase.auth.signOut()
+  const logout = () => {
     setCurrentUser(null)
-    setUsers([])
   }
 
   const addUser = (user: User) => {
-    // This is now handled in the register function
-    console.log("[v0] addUser called - user creation handled in register")
+    console.log("[v0] Adding user:", user.email) // Debug logging
+    setUsers((prev) => {
+      const newUsers = [...prev, user]
+      console.log("[v0] Total users after add:", newUsers.length) // Debug logging
+      return newUsers
+    })
   }
 
   const deleteUser = (id: string) => {
@@ -257,35 +210,12 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const addQuiz = async (quiz: Quiz) => {
-    const { error } = await supabase.from("quizzes").insert({
-      id: quiz.id,
-      title: quiz.title,
-      description: quiz.description,
-      questions: quiz.questions,
-      duration: quiz.duration,
-      price: quiz.price,
-      is_active: quiz.isActive,
-      created_by: currentUser?.id,
-    })
-
-    if (error) {
-      console.error("Error adding quiz:", error)
-      throw error
-    }
-
-    await refreshQuizzes()
+  const addQuiz = (quiz: Quiz) => {
+    setQuizzes((prev) => [...prev, quiz])
   }
 
-  const deleteQuiz = async (id: string) => {
-    const { error } = await supabase.from("quizzes").delete().eq("id", id)
-
-    if (error) {
-      console.error("Error deleting quiz:", error)
-      throw error
-    }
-
-    await refreshQuizzes()
+  const deleteQuiz = (id: string) => {
+    setQuizzes((prev) => prev.filter((q) => q.id !== id))
   }
 
   const toggleQuizActive = (id: string) => {
@@ -300,23 +230,24 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setRegistrationRequests((prev) => [...prev, request])
   }
 
-  const purchaseQuiz = async (userId: string, quizId: string) => {
-    const { error } = await supabase.from("purchases").insert({
-      user_id: userId,
-      quiz_id: quizId,
-    })
+  const purchaseQuiz = (userId: string, quizId: string) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          const purchasedQuizzes = u.purchasedQuizzes || []
+          if (!purchasedQuizzes.includes(quizId)) {
+            return { ...u, purchasedQuizzes: [...purchasedQuizzes, quizId] }
+          }
+        }
+        return u
+      }),
+    )
 
-    if (error && !error.message.includes("duplicate")) {
-      console.error("Error purchasing quiz:", error)
-      throw error
-    }
-
-    // Update local state
     if (currentUser?.id === userId) {
-      setCurrentUser({
-        ...currentUser,
-        purchasedQuizzes: [...(currentUser.purchasedQuizzes || []), quizId],
-      })
+      const purchasedQuizzes = currentUser.purchasedQuizzes || []
+      if (!purchasedQuizzes.includes(quizId)) {
+        setCurrentUser({ ...currentUser, purchasedQuizzes: [...purchasedQuizzes, quizId] })
+      }
     }
   }
 
@@ -328,7 +259,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         users,
         addUser,
         deleteUser,
-        updateUser,
+        updateUser, // Added to context
         login,
         logout,
         quizzes,
@@ -339,9 +270,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         addResult,
         registrationRequests,
         addRegistrationRequest,
-        purchaseQuiz,
-        refreshQuizzes, // Added
-        refreshUsers, // Added
+        purchaseQuiz, // Added to context
       }}
     >
       {children}
